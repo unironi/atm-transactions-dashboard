@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box';
 import { DataGrid } from '@mui/x-data-grid';
+import { DataGridPro } from '@mui/x-data-grid-pro/DataGridPro';
 import { useEffect, useState } from 'react';
 import { fetchAtmList, fetchAtmIdTransactions } from '../services/atmService';
 
@@ -16,32 +17,30 @@ export default function TransactionTable() {
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [rows, setRows] = useState<any[]>([]);
 
-  // loop through atm list IDs
-  // call getTransactionListWithPost using rq object
-  // {
-  //   "atmId": [i],
-  //   "date0": 1,
-  //   "date1": 2147483647
-  // }
-  // it will get all transactions with that atm id throughout all of time
-  // for date column, we can access the atmlist object's "ts" field, object.ts (timestamp in milliseconds) https://www.epochconverter.com
-  // for atm id, use object.id / txn[i].atm.id
-  // for customerPAN, txn[i].pan
-  // for description, txn[i].hst.descr, .ttp.descr, .state.descr, check if there's .err and .withdrawalError
-  // dont know what code column is meant to be- some 6-7 digit code, date, or transaction num?
-
   useEffect(() => {
     async function fetchData() {
       try {
         const atmlist = await fetchAtmList();
-        
+
+        const limit = 2000; // setting an approximate limit so we dont load 46k transactions while testing
+        let collected = 0;
+        const newTransactions: any[] = [];
+
+        // looping through atm list to find transactions on each atm
         for (const atm of atmlist) {
+          if (collected >= limit) break;
+
           const atmTransactions = (await fetchAtmIdTransactions(atm.id)).txn ?? [];
+
           if (atmTransactions.length > 0) {
-            console.log(atmTransactions)
-            setTransactionData(prev => [...prev, ...atmTransactions]);
+            const numTransactions = Math.min(limit - collected, atmTransactions.length);
+            newTransactions.push(...atmTransactions.slice(0, numTransactions));
+            collected += numTransactions;
           }
         }
+
+        setTransactionData(newTransactions);
+
       } catch (err) {
         console.error(err);
       }
@@ -49,6 +48,7 @@ export default function TransactionTable() {
     fetchData();
   }, []);
 
+  // filtering fields for table display
   useEffect(() => {
     const filteredRows = transactionData.map((t, i) => ({
       id: i,
@@ -61,15 +61,18 @@ export default function TransactionTable() {
     setRows(filteredRows);
   }, [transactionData]);
   
-
   return (
+    <>
+    
     <Box sx={{ height: 600, width: 1 }}>
-      <DataGrid
+      <DataGrid // DataGridPro allows multiple filters but this is a pro feature
         disableColumnSelector
         columns={columns}
         rows={rows}
         showToolbar
       />
     </Box>
+    </>
+    
   );
 }
