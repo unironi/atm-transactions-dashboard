@@ -27,7 +27,11 @@ export interface Transaction {
         id: number,
         txt: string,
     },
-    withdrawalError: boolean
+    withdrawalError: boolean,
+    app: { // not all transactions will have this field
+        id: number,
+        txt: string, // this field shows AID
+    } // aid types: EMV, GP, JCOP, USIM, BuyPass, OpenPGP, Smartchess - will need to filter so only EMV AIDs are allowed
 }
 
 export interface AtmTransactionsResponse {

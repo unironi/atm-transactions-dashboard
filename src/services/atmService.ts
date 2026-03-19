@@ -1,4 +1,4 @@
-import type { AtmTransactionsResponse } from "../types/atm";
+import type { AtmTransactionsResponse, Transaction } from "../types/atm";
 
 export async function fetchAtmList() {
     try {
@@ -42,6 +42,29 @@ export async function fetchAtmIdTransactions(id: number): Promise<AtmTransaction
         return json; // if no .txn field in object, no transactions
     } catch (error) {
         console.log('fetchAtmIDTransactions error:', error);
+        throw error;
+    }
+}
+
+// for EMV AID search, will need to fetch getAidList and filter out non-EMV types for dropdown
+// when user selects an aid, will need to loop through transactions that contain app field
+// and return the ones where app.text = selected aid or app.id = selected id
+
+export async function fetchEmvAidList(): Promise<string[]> {
+    try {
+        const result = await fetch("https://dev.smartjournal.net:443/um/test/api/jr/txn/aidlist/v1");
+        if (!result.ok) {
+            throw new Error(`HTTP error: ${result.status}`);
+        }
+        const json = await result.json();
+        if (Array.isArray(json) && json.length > 0) {
+            const emvList = json.filter((i) => (i.type == "EMV"));
+            const emvAidList: string[] = emvList.map(i => i.aid);
+            return emvAidList;
+        }
+        return [];
+    } catch (error) {
+        console.log('fetchEmvAidList error:', error);
         throw error;
     }
 }
