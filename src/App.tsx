@@ -11,7 +11,7 @@ function App() {
   return (
     <div style={{ display: "flex" }}>
       <SideBar />
-      <main style={{ flex: 1, padding: 16 }}>
+      <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<TransactionTable />} />
           <Route path="/settings" element={<NoImplementation />} />
@@ -21,7 +21,7 @@ function App() {
         </Routes>
       </main>
     </div>
-  );
+  )
 }
 
 export default App

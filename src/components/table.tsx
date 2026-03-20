@@ -6,6 +6,8 @@ import { fetchAtmList, fetchAtmIdTransactions, fetchEmvAidList } from '../servic
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import TextField from '@mui/material/TextField';
+
 
 const columns = [
   { field: 'date', headerName: 'Date', flex: 1 },
@@ -21,6 +23,7 @@ export default function TransactionTable() {
   const [aid, setAid] = useState("All");
   const [aidList, setAidList] = useState<string[]>([]);
   const [rows, setRows] = useState<any[]>([]);
+  const allRows = tableRows(transactionData);
 
   // filtering fields for table display
   function tableRows(data: any[]) {
@@ -32,17 +35,10 @@ export default function TransactionTable() {
       description: t.hst?.descr || t.ttp?.descr || t.state?.descr || '',
       code: '',
       aid: t.app?.txt,
+      ref: t.ref,
     }));
   }
 
-  useEffect(() => {
-    const allRows = tableRows(transactionData);
-    if (aid === "All") {
-      setRows(allRows);
-    } else {
-      setRows(allRows.filter((row) => row.aid === aid));
-    }
-  }, [transactionData, aid]);
   // fetching transactions
   useEffect(() => {
     async function fetchData() {
@@ -88,16 +84,41 @@ export default function TransactionTable() {
     fetchAID();
   }, []);
 
+  // update rows when emv chip aid is selected
+  useEffect(() => {
+    if (aid === "All") {
+      setRows(allRows);
+    } else {
+      setRows(allRows.filter((row) => row.aid === aid));
+    }
+  }, [transactionData, aid]);
 
+  // handle selected aid changes
   function handleAidChange(e: any) {
     const selectedAid = e.target.value as string;
     setAid(selectedAid);
   }
+
+  // handle input in transaction serial searchbar
+  function handleTransactionSerial(e: any) {
+    if (e.key == "Enter") {
+      e.preventDefault();
+      const serial = e.target.value as string;
+      if (serial) { // if the serial is not an empty string, then attempt to filter rows
+        setRows(allRows.filter((row) => row.ref == serial));
+      } else { // otherwise, show all rows
+        setRows(allRows);
+      }
+    }
+  }
   
   return (
     <>
-    <Box sx={{ minWidth: 120 }}>
-      <FormControl fullWidth>
+    <Box sx={{ minWidth: 120, marginBottom: 4, marginTop: 4, display: "flex", flexDirection: "row", gap: 2 }}>
+      {/* (pro feature) <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <DateRangePicker />
+      </LocalizationProvider> */} 
+      <FormControl sx={{ flex: 1 }}>
         <InputLabel id="aid-select-label">EMV Chip Aid</InputLabel>
         <Select
           labelId="aid-select-label"
@@ -111,6 +132,16 @@ export default function TransactionTable() {
             ))}
         </Select>
       </FormControl>
+      <FormControl sx={{ flex: 1 }}>
+        <TextField
+          id="transaction-serial-input"
+          label="Transaction Serial Number"
+          variant="outlined"
+          helperText="4 digit number"
+          onKeyDown={handleTransactionSerial}
+        />
+      </FormControl>
+      
     </Box>
     
     
