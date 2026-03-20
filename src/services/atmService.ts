@@ -1,4 +1,4 @@
-import type { AtmTransactionsResponse, Transaction } from "../types/atm";
+import type { AtmTransactionsResponse } from "../types/atm";
 
 export async function fetchAtmList() {
     try {
@@ -67,4 +67,15 @@ export async function fetchEmvAidList(): Promise<string[]> {
         console.log('fetchEmvAidList error:', error);
         throw error;
     }
+}
+
+// devtime has format YYYYMMDDHHMMSS. converting this to a date object to allow for easier comparisons
+export function parseDevtime(devtime: string): Date {
+    const year = Number(devtime.slice(0, 4));
+    const month = Number(devtime.slice(4, 6));
+    const day = Number(devtime.slice(6, 8));
+
+    const date: Date = new Date(year, month, day);
+
+    return date;
 }

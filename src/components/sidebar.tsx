@@ -31,7 +31,7 @@ export default function SideBar() {
                     "& .MuiDrawer-paper": {
                         width: drawerWidth,
                         boxSizing: "border-box"
-                    }
+                    },
                 }}
                 variant="permanent"
                 anchor="left"
