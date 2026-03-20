@@ -2,6 +2,10 @@
 
 Page that shows a table with transaction data pulled from ATM API, including search filters.
 
+Live link: https://atm-transactions-dashboard.vercel.app
+
+Note: takes a couple seconds for all transactions to load when you first load the page; ideally it should say "Loading..." instead of "No rows".
+
 Tech stack:
 - React
 - Material UI
