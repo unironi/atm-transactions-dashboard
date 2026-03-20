@@ -151,6 +151,7 @@ export default function TransactionTable() {
     }
   }
 
+  // handle entered date range input
   function handleDateChange(e: any) {
     if (e.key == "Enter") {
       e.preventDefault();
@@ -207,7 +208,7 @@ export default function TransactionTable() {
     </Box>
     
     
-    <Box sx={{ height: 600, width: 1,  }}>
+    <Box sx={{ height: 600, width: 1,  border: "none"}}>
       <DataGrid // DataGridPro allows multiple filters but this is a pro feature
         disableColumnSelector
         columns={columns}
