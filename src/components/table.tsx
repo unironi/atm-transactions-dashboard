@@ -7,28 +7,49 @@ import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 
+const columns = [
+  { field: 'date', headerName: 'Date', flex: 1 },
+  { field: 'atmId', headerName: 'ATM ID', flex: 1 },
+  { field: 'customerPan', headerName: 'Customer PAN', flex: 1 },
+  { field: 'description', headerName: 'Description', flex: 2 },
+  { field: 'code', headerName: 'Code', flex: 1 },
+];
+
 export default function TransactionTable() {
 
-  const columns = [
-    { field: 'date', headerName: 'Date', flex: 1 },
-    { field: 'atmId', headerName: 'ATM ID', flex: 1 },
-    { field: 'customerPan', headerName: 'Customer PAN', flex: 1 },
-    { field: 'description', headerName: 'Description', flex: 2 },
-    { field: 'code', headerName: 'Code', flex: 1 },
-  ];
-
   const [transactionData, setTransactionData] = useState<any[]>([]);
+  const [aid, setAid] = useState("All");
+  const [aidList, setAidList] = useState<string[]>([]);
   const [rows, setRows] = useState<any[]>([]);
-  const [aid, setAid] = useState('');
-  const [aidList, setAidList] = useState<string[]>(["All"]);
 
+  // filtering fields for table display
+  function tableRows(data: any[]) {
+    return data.map((t, i) => ({
+      id: i,
+      date: t.devTime,
+      atmId: t.atm?.txt,
+      customerPan: t.pan ?? '****',
+      description: t.hst?.descr || t.ttp?.descr || t.state?.descr || '',
+      code: '',
+      aid: t.app?.txt,
+    }));
+  }
+
+  useEffect(() => {
+    const allRows = tableRows(transactionData);
+    if (aid === "All") {
+      setRows(allRows);
+    } else {
+      setRows(allRows.filter((row) => row.aid === aid));
+    }
+  }, [transactionData, aid]);
   // fetching transactions
   useEffect(() => {
     async function fetchData() {
       try {
         const atmlist = await fetchAtmList();
 
-        const limit = 2000; // setting an approximate limit so we dont load 46k transactions while testing
+        const limit = 20000; // setting an approximate limit so we dont load 20k+ transactions while testing
         let collected = 0;
         const newTransactions: any[] = [];
 
@@ -37,7 +58,7 @@ export default function TransactionTable() {
           if (collected >= limit) break;
 
           const atmTransactions = (await fetchAtmIdTransactions(atm.id)).txn ?? [];
-          console.log(atmTransactions);
+          // console.log(atmTransactions);
           if (atmTransactions.length > 0) {
             const numTransactions = Math.min(limit - collected, atmTransactions.length);
             newTransactions.push(...(atmTransactions.slice(0, numTransactions)));
@@ -53,26 +74,13 @@ export default function TransactionTable() {
     }
     fetchData();
   }, []);
-
-  // filtering fields for table display
-  useEffect(() => {
-    const filteredRows = transactionData.map((t, i) => ({
-      id: i,
-      date: t.devTime,
-      atmId: t.atm?.txt,
-      customerPan: t.pan ?? '****',
-      description: t.hst?.descr || t.ttp?.descr || t.state?.descr || '',
-      code: '',
-    }));
-    setRows(filteredRows);
-  }, [transactionData]);
-
+  
   // fetching EMV AID list
   useEffect(() => {
     async function fetchAID() {
       try {
         const data = await fetchEmvAidList();
-        setAidList((prev) => [...prev, ...data]);
+        setAidList(["All"].concat(...data));
       } catch (err) {
         console.error(err);
       }
@@ -80,8 +88,10 @@ export default function TransactionTable() {
     fetchAID();
   }, []);
 
+
   function handleAidChange(e: any) {
-    setAid(e.target.value as string);
+    const selectedAid = e.target.value as string;
+    setAid(selectedAid);
   }
   
   return (
