@@ -156,6 +156,8 @@ export default function TransactionTable() {
       e.preventDefault();
       if (firstDate && secondDate) {
         setRows(allRows.filter((row) => new Date(row.date) >= firstDate && new Date(row.date) <= secondDate))
+      } else {
+        setRows(allRows);
       }
     }
   }
