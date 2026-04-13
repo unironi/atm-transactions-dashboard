@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Box from '@mui/material/Box';
 import { DataGrid } from '@mui/x-data-grid';
 import Select from '@mui/material/Select';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchAtmList, fetchAtmIdTransactions, fetchEmvAidList, parseDevtime } from '../services/atmService';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
@@ -17,52 +18,44 @@ const columns = [
   { field: 'code', headerName: 'Code', flex: 1 },
 ];
 
+// date range will be formatted 16 digit value (first 8 for first date, last 8 for second date)
+function formatDateRangeValue(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 16); // strip non-digits
+
+  const formatDate = (part: string) => {
+    if (part.length <= 2) return part; // only month provided
+    if (part.length <= 4) return `${part.slice(0, 2)}/${part.slice(2)}`; // only month and day
+    return `${part.slice(0, 2)}/${part.slice(2, 4)}/${part.slice(4, 8)}`; // mm/dd/yyyy
+  };
+
+  const first = formatDate(digits.slice(0, 8));
+  const second = formatDate(digits.slice(8));
+
+  return second ? `${first} - ${second}` : first; // if there is no second date, then first date should still be valid search filter
+}
+
+// split date1 - date2
+function parseDateRange(dateRange: string): { first: Date | null, second: Date | null } {
+  const parts = dateRange.split(' - ');
+  if (parts.length !== 2) return { first: null, second: null };
+
+  const firstDate = new Date(parts[0]);
+  const secondDate = new Date(parts[1]);
+
+  return {
+    first: isNaN(firstDate.getTime()) ? null : firstDate,
+    second: isNaN(secondDate.getTime()) ? null : secondDate,
+  };
+}
+
 export default function TransactionTable() {
 
   const [transactionData, setTransactionData] = useState<any[]>([]);
   const [aid, setAid] = useState("All");
   const [aidList, setAidList] = useState<string[]>([]);
-  const [rows, setRows] = useState<any[]>([]);
   const [dateInput, setDateInput] = useState<string>("");
-  const [firstDate, setFirstDate] = useState<Date | null>(null);
-  const [secondDate, setSecondDate] = useState<Date | null>(null);
+  const [serial, setSerial] = useState<string>("");
   const allRows = tableRows(transactionData);
-
-  function formatDateRangeValue(value: string) {
-    const digits = value.replace(/\D/g, '').slice(0, 16);
-    const formatDate = (part: string) => {
-      if (part.length <= 2) return part;
-      if (part.length <= 4) return `${part.slice(0, 2)}/${part.slice(2)}`;
-      return `${part.slice(0, 2)}/${part.slice(2, 4)}/${part.slice(4, 8)}`;
-    };
-
-    const first = formatDate(digits.slice(0, 8));
-    const second = formatDate(digits.slice(8));
-
-    return second ? `${first} - ${second}` : first;
-  }
-
-  function parseDateRange(dateRange: string): { first: Date | null, second: Date | null } {
-    const parts = dateRange.split(' - ');
-    if (parts.length !== 2) return { first: null, second: null };
-
-    const firstDate = new Date(parts[0]);
-    const secondDate = new Date(parts[1]);
-
-    return {
-      first: isNaN(firstDate.getTime()) ? null : firstDate,
-      second: isNaN(secondDate.getTime()) ? null : secondDate,
-    };
-  }
-
-  function handleDateInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const formatted = formatDateRangeValue(e.target.value);
-    setDateInput(formatted);
-
-    const { first, second } = parseDateRange(formatted);
-    setFirstDate(first);
-    setSecondDate(second);
-  }
 
   // filtering fields for table display
   function tableRows(data: any[]) {
@@ -123,14 +116,11 @@ export default function TransactionTable() {
     fetchAID();
   }, []);
 
-  // update rows when emv chip aid is selected
-  useEffect(() => {
-    if (aid === "All") {
-      setRows(allRows);
-    } else {
-      setRows(allRows.filter((row) => row.aid === aid));
-    }
-  }, [transactionData, aid]);
+  // handle changes to date input
+  function handleDateInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatDateRangeValue(e.target.value);
+    setDateInput(formatted);
+  }
 
   // handle selected aid changes
   function handleAidChange(e: any) {
@@ -142,26 +132,26 @@ export default function TransactionTable() {
   function handleTransactionSerial(e: any) {
     if (e.key == "Enter") {
       e.preventDefault();
-      const serial = e.target.value as string;
-      if (serial) { // if the serial is not an empty string, then attempt to filter rows
-        setRows(allRows.filter((row) => row.ref == serial));
-      } else { // otherwise, show all rows
-        setRows(allRows);
-      }
+      const selectedSerial = e.target.value as string;
+      setSerial(selectedSerial);
     }
   }
 
-  // handle entered date range input
-  function handleDateChange(e: any) {
-    if (e.key == "Enter") {
-      e.preventDefault();
-      if (firstDate && secondDate) {
-        setRows(allRows.filter((row) => new Date(row.date) >= firstDate && new Date(row.date) <= secondDate))
-      } else {
-        setRows(allRows);
-      }
+  const { first, second } = parseDateRange(dateInput); // first and second dates
+
+  const visibleRows = useMemo(() => { // filtered table rows
+    let rows = (aid === "All") ? allRows : allRows.filter((row) => row.aid === aid);
+    
+    rows = serial? rows.filter((row) => row.ref == serial) : rows; // if serial is am empty string then return rows
+    
+    if (first && second) { // date filtering
+     rows = rows.filter((row) => new Date(row.date) >= first && new Date(row.date) <= second);
+    } else if (first) {
+      rows = rows.filter((row) => new Date(row.date) == first);
     }
-  }
+    
+    return rows;
+  }, [allRows, aid, serial, first, second]); 
   
   return (
     <>
@@ -178,7 +168,6 @@ export default function TransactionTable() {
           value={dateInput}
           helperText="(e.g. 04/01/2024 - 04/30/2024)"
           onChange={handleDateInput}
-          onKeyDown={handleDateChange}
         />
       </FormControl>
       <FormControl sx={{ flex: 1 }}>
@@ -212,7 +201,7 @@ export default function TransactionTable() {
       <DataGrid // DataGridPro allows multiple filters but this is a pro feature
         disableColumnSelector
         columns={columns}
-        rows={rows}
+        rows={visibleRows}
         showToolbar
       />
     </Box>
