@@ -55,6 +55,7 @@ export default function TransactionTable() {
   const [aidList, setAidList] = useState<string[]>([]);
   const [dateInput, setDateInput] = useState<string>("");
   const [serial, setSerial] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const allRows = tableRows(transactionData);
 
   // filtering fields for table display
@@ -95,6 +96,7 @@ export default function TransactionTable() {
         }
 
         setTransactionData(newTransactions);
+        setLoading(false);
 
       } catch (err) {
         console.error(err);
@@ -203,6 +205,7 @@ export default function TransactionTable() {
         columns={columns}
         rows={visibleRows}
         showToolbar
+        loading = {loading}
       />
     </Box>
     </>
