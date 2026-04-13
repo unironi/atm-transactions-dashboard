@@ -2,7 +2,7 @@
 import Box from '@mui/material/Box';
 import { DataGrid } from '@mui/x-data-grid';
 import Select from '@mui/material/Select';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchAtmList, fetchAtmIdTransactions, fetchEmvAidList, parseDevtime } from '../services/atmService';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
@@ -54,6 +54,7 @@ export default function TransactionTable() {
   const [aid, setAid] = useState("All");
   const [aidList, setAidList] = useState<string[]>([]);
   const [dateInput, setDateInput] = useState<string>("");
+  const [dateInputEntered, setDateInputEntered] = useState<string>("");
   const [serial, setSerial] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const allRows = tableRows(transactionData);
@@ -119,10 +120,25 @@ export default function TransactionTable() {
   }, []);
 
   // handle changes to date input
-  function handleDateInput(e: React.ChangeEvent<HTMLInputElement>) {
+
+
+  function handleDateInputKeyDown(e: any) {
+    if (e.key == "Enter") {
+      e.preventDefault();
+      setDateInputEntered(dateInput);
+    }
+  }
+
+  // using callback to resolve laggy input
+  const handleDateInputChange = useCallback((e: any) => {
     const formatted = formatDateRangeValue(e.target.value);
     setDateInput(formatted);
-  }
+  }, []);
+
+  // function handleDateInputChange(e: any) {
+  //   const formatted = formatDateRangeValue(e.target.value);
+  //   setDateInput(formatted);
+  // }
 
   // handle selected aid changes
   function handleAidChange(e: any) {
@@ -139,7 +155,7 @@ export default function TransactionTable() {
     }
   }
 
-  const { first, second } = parseDateRange(dateInput); // first and second dates
+  const { first, second } = parseDateRange(dateInputEntered); // first and second dates
 
   const visibleRows = useMemo(() => { // filtered table rows
     let rows = (aid === "All") ? allRows : allRows.filter((row) => row.aid === aid);
@@ -168,8 +184,9 @@ export default function TransactionTable() {
           variant="outlined"
           placeholder="MM/DD/YYYY - MM/DD/YYYY"
           value={dateInput}
-          helperText="(e.g. 04/01/2024 - 04/30/2024)"
-          onChange={handleDateInput}
+          helperText="(e.g. 01/01/2023 - 04/30/2023)"
+          onKeyDown={handleDateInputKeyDown}
+          onChange={handleDateInputChange}
         />
       </FormControl>
       <FormControl sx={{ flex: 1 }}>
